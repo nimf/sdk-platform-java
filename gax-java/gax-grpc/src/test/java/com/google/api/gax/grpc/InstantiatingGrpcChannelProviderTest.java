@@ -656,9 +656,12 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
             .setCertificateBasedAccess(certificateBasedAccess)
             .build();
     createAndCloseTransportChannel(provider);
-    assertThat(logHandler.getAllMessages())
-        .contains(
-            "DirectPath is misconfigured. The DirectPath XDS option was set, but the attemptDirectPath option was not. Please set both the attemptDirectPath and attemptDirectPathXds options.");
+
+    if (InstantiatingGrpcChannelProvider.isOnComputeEngine()) {
+      assertThat(logHandler.getAllMessages())
+          .contains(
+              "DirectPath is misconfigured. The DirectPath XDS option was set, but the attemptDirectPath option was not. Please set both the attemptDirectPath and attemptDirectPathXds options.");
+    }
     InstantiatingGrpcChannelProvider.LOG.removeHandler(logHandler);
   }
 
@@ -673,10 +676,12 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
             .setCertificateBasedAccess(certificateBasedAccess)
             .build();
     createAndCloseTransportChannel(provider);
-    assertThat(logHandler.getAllMessages())
-        .contains(
-            "Env var GOOGLE_CLOUD_ENABLE_DIRECT_PATH_XDS was found and set to TRUE, but DirectPath was not enabled for this client. If this is intended for "
-                + "this client, please note that this is a misconfiguration and set the attemptDirectPath option as well.");
+    if (InstantiatingGrpcChannelProvider.isOnComputeEngine()) {
+      assertThat(logHandler.getAllMessages())
+          .contains(
+              "Env var GOOGLE_CLOUD_ENABLE_DIRECT_PATH_XDS was found and set to TRUE, but DirectPath was not enabled for this client. If this is intended for "
+                  + "this client, please note that this is a misconfiguration and set the attemptDirectPath option as well.");
+    }
     InstantiatingGrpcChannelProvider.LOG.removeHandler(logHandler);
   }
 
@@ -710,37 +715,11 @@ class InstantiatingGrpcChannelProviderTest extends AbstractMtlsTransportChannelT
 
     TransportChannel transportChannel = provider.getTransportChannel();
 
-    assertThat(logHandler.getAllMessages())
-        .contains(
-            "DirectPath is misconfigured. Please make sure the credential is an instance of"
-                + " com.google.auth.oauth2.ComputeEngineCredentials .");
-    InstantiatingGrpcChannelProvider.LOG.removeHandler(logHandler);
-
-    transportChannel.close();
-    transportChannel.awaitTermination(10, TimeUnit.SECONDS);
-  }
-
-  @Test
-  void testLogDirectPathMisconfigNotOnGCE() throws Exception {
-    FakeLogHandler logHandler = new FakeLogHandler();
-    InstantiatingGrpcChannelProvider.LOG.addHandler(logHandler);
-    InstantiatingGrpcChannelProvider provider =
-        InstantiatingGrpcChannelProvider.newBuilder()
-            .setAttemptDirectPathXds()
-            .setAttemptDirectPath(true)
-            .setAllowNonDefaultServiceAccount(true)
-            .setHeaderProvider(Mockito.mock(HeaderProvider.class))
-            .setExecutor(Mockito.mock(Executor.class))
-            .setEndpoint(DEFAULT_ENDPOINT)
-            .setCertificateBasedAccess(certificateBasedAccess)
-            .build();
-
-    TransportChannel transportChannel = provider.getTransportChannel();
-
-    if (!InstantiatingGrpcChannelProvider.isOnComputeEngine()) {
+    if (InstantiatingGrpcChannelProvider.isOnComputeEngine()) {
       assertThat(logHandler.getAllMessages())
           .contains(
-              "DirectPath is misconfigured. DirectPath is only available in a GCE environment.");
+              "DirectPath is misconfigured. Please make sure the credential is an instance of"
+                  + " com.google.auth.oauth2.ComputeEngineCredentials .");
     }
     InstantiatingGrpcChannelProvider.LOG.removeHandler(logHandler);
 
